@@ -1,6 +1,6 @@
 import functools
 import sys
-from datetime import time
+from datetime import datetime
 
 import requests
 from memory_profiler import memory_usage
@@ -29,13 +29,11 @@ def cache_lfu(max_limit=100):
                 deco._cache[cache_key]["counter"] += 1
                 return deco._cache[cache_key]["result"]
 
-
-
             if len(deco._cache) >= max_limit:
                 del deco._cache[min(deco._cache, key=lambda cache_key: deco._cache[cache_key]["counter"])]
 
             result = f(*args, **kwargs)
-
+            deco._cache[cache_key] = {}
             deco._cache[cache_key]["counter"] = 1
             deco._cache[cache_key]["result"] = result
 
@@ -43,32 +41,38 @@ def cache_lfu(max_limit=100):
 
         deco._cache = {}
         return deco
+
     return internal
+
 
 def profile(msg='Elapsed time', file=sys.stdout):
     def internal(f):
         @functools.wraps(f)
         def deco(*args, **kwargs):
-            start = time.time()
+            start = datetime.now()
             result = f(*args, **kwargs)
-            print(msg, f'({f.__name__}): {time.time() - start}s', file=file)
+            print(msg, f'({f.__name__}): {datetime.now() - start}s', file=file)
             return result
+
         return deco
+
     return internal
 
-@cache_lfu
-@profile
-@profile_memory
+
+@profile()
+@profile_memory()
+@cache_lfu()
 def fetch_url(url, first_n=120):
     """Fetch a given url"""
     res = requests.get(url)
     return res.content[:first_n] if first_n else res.content
 
 
-fetch_url('https://google.com')
-fetch_url('https://google.com')
-fetch_url('https://google.com')
-fetch_url('https://ithillel.ua')
-fetch_url('https://dou.ua')
-fetch_url('https://ain.ua')
-fetch_url('https://youtube.com')
+if __name__ == '__main__':
+    fetch_url('https://google.com')
+    fetch_url('https://google.com')
+    fetch_url('https://google.com')
+    fetch_url('https://ithillel.ua')
+    fetch_url('https://dou.ua')
+    fetch_url('https://ain.ua')
+    fetch_url('https://youtube.com')
